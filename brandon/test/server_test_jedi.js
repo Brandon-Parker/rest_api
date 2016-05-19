@@ -6,10 +6,26 @@ const request = chai.request;
 const mongoose = require('mongoose');
 const port = process.env.PORT = 4545;
 process.env.MONGODB_URI = 'mongodb://localhost/jedi_sith_test_db';
+const User = require(__dirname + '/../models/user');
 require(__dirname + '/../server.js');
 var Jedi = require(__dirname + '/../models/jedi');
 
 describe('The POST requests', () => {
+  before((done) => {
+    var newUser = new User({
+      username: 'testUser',
+      password: 'testPW'
+    });
+    newUser.save((err, user) => {
+      if (err) console.log(err);
+      user.generateToken((err, token) => {
+        if (err) console.log(err);
+        this.token = token;
+        this.user = user;
+        done();
+      });
+    });
+  });
   after((done) => {
     mongoose.connection.db.dropDatabase(() => {
       done();
@@ -18,6 +34,7 @@ describe('The POST requests', () => {
   it('should add a Jedi to the DB', (done) => {
     request('localhost:' + port)
     .post('/api/jedi')
+    .set('token', this.token)
     .send({
       name: 'Brandon Parker',
       ranking: 'Jedi EMPEROR',
@@ -52,6 +69,21 @@ describe('The Jedi GET request', () => {
 });
 
 describe('adding to the Jedi Council', () => {
+  before((done) => {
+    var newUser = new User({
+      username: 'testUserPut',
+      password: 'testPW'
+    });
+    newUser.save((err, user) => {
+      if (err) console.log(err);
+      user.generateToken((err, token) => {
+        if (err) console.log(err);
+        this.token = token;
+        this.user = user;
+        done();
+      });
+    });
+  });
   beforeEach((done) => {
     var newJedi = new Jedi({
       name: 'Harry Potter',
@@ -82,6 +114,7 @@ describe('adding to the Jedi Council', () => {
   it('PUT, you shall', (done) => {
     request('localhost:' + port)
     .put('/api/jedi/' + this.jedi._id)
+    .set('token', this.token)
     .send({
       name: 'Gandalf',
       ranking: 'Higher Force Wizard',
@@ -100,6 +133,7 @@ describe('adding to the Jedi Council', () => {
   it('should banish the Jedi from the Council with a DELETE', (done) => {
     request('localhost:' + port)
     .delete('/api/jedi/' + this.jedi._id)
+    .set('token', this.token)
     .end((err, res) => {
       expect(err).to.eql(null);
       expect(res.body.msg).to.eql('I have felt a tremor in the force. The Dark Side calls');

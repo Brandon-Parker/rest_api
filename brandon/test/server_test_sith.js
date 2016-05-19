@@ -6,10 +6,26 @@ const request = chai.request;
 const mongoose = require('mongoose');
 const port = process.env.PORT = 4545;
 process.env.MONGODB_URI = 'mongodb://localhost/jedi_sith_test_db';
+const User = require(__dirname + '/../models/user');
 require(__dirname + '/../server.js');
 const Sith = require(__dirname + '/../models/sith');
 
 describe('The POST requests', () => {
+  before((done) => {
+    var newUser = new User({
+      username: 'testUser',
+      password: 'testPW'
+    });
+    newUser.save((err, user) => {
+      if (err) console.log(err);
+      user.generateToken((err, token) => {
+        if (err) console.log(err);
+        this.token = token;
+        this.user = user;
+        done();
+      });
+    });
+  });
   after((done) => {
     mongoose.connection.db.dropDatabase(() => {
       done();
@@ -18,6 +34,7 @@ describe('The POST requests', () => {
   it('should add a Sith to the DB', (done) => {
     request('localhost:' + port)
     .post('/api/jedi')
+    .set('token', this.token)
     .send({
       name: 'Darth Bandon',
       ranking: 'Sith Lord',
@@ -52,6 +69,21 @@ describe('The Sith GET request', () => {
 });
 
 describe('adding to the Sith Council', () => {
+  before((done) => {
+    var newUser = new User({
+      username: 'testUserPut',
+      password: 'testPW'
+    });
+    newUser.save((err, user) => {
+      if (err) console.log(err);
+      user.generateToken((err, token) => {
+        if (err) console.log(err);
+        this.token = token;
+        this.user = user;
+        done();
+      });
+    });
+  });
   beforeEach((done) => {
     var newSith = new Sith({
       name: 'Spock',
@@ -82,6 +114,7 @@ describe('adding to the Sith Council', () => {
   it('PUT, you shall', (done) => {
     request('localhost:' + port)
     .put('/api/sith/' + this.sith._id)
+    .set('token', this.token)
     .send({
       name: 'Sauromon',
       ranking: 'Evil Mythic Wizard',
@@ -100,6 +133,7 @@ describe('adding to the Sith Council', () => {
   it('should banish the Sith from the Council with a DELETE', (done) => {
     request('localhost:' + port)
     .delete('/api/sith/' + this.sith._id)
+    .set('token', this.token)
     .end((err, res) => {
       expect(err).to.eql(null);
       expect(res.body.msg).to.eql('I have felt a tremor in the force. The Dark Side calls');
